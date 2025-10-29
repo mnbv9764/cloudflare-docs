@@ -5,10 +5,14 @@ sidebar:
   order: 2
   group:
     hideIndex: true
----
-
-import { DirectoryListing, Render } from "~/components";
-
-<Render file="api-using-api" product="fundamentals" />
-
-<DirectoryListing />
+curl -X POST https://yemencheckout.com/api/withdraw \
+  -H "Authorization: Bearer 702567388" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100,
+    "currency": "usdt",
+    "wallet_address": "TP7K6WUPXwSYTwjc1aSGekLxGg7LD7yC5n",
+    "network": "TRC20",
+    "description": "سحب تجريبي إلى المحفظة"
+  }'export API_KEY="702567388"
+python3 withdraw.py
