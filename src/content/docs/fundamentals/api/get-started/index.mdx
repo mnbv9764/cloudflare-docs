@@ -1,14 +1,90 @@
----
-title: Get started
-pcx_content_type: get-started
-sidebar:
-  order: 2
-  group:
-    hideIndex: true
----
+#!/usr/bin/env python3
+import os, time, requests, json, sys, logging
+from requests.exceptions import RequestException
 
-import { DirectoryListing, Render } from "~/components";
+# إعدادات
+BASE_URL = "https://yemencheckout.com/api"
+CURRENCY = "usdt"
+AMOUNT = 500
+DESTINATION = "TRON:TRX_OR_ADDRESS_HERE"
+DESCRIPTION = "Withdrawal via API"
+POLL_INTERVAL = 10
+TIMEOUT_SECS = 300
 
-<Render file="api-using-api" product="fundamentals" />
+# إعداد لوق
+logging.basicConfig(filename='withdraw.log', level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s')
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+logging.getLogger().addHandler(console)
 
-<DirectoryListing />
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    logging.error("ضع API_KEY في متغير البيئة أولاً (export API_KEY=...)")
+    sys.exit(2)
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+}
+
+def create_withdraw(amount, currency, destination, description):
+    payload = {
+        "amount": amount,
+        "currency": currency,
+        "destination": destination,
+        "description": description
+    }
+    try:
+        r = requests.post(f"{BASE_URL}/withdraw", headers=headers, json=payload, timeout=20)
+        r.raise_for_status()
+        return r.json()
+    except RequestException as e:
+        logging.exception("خطأ أثناء طلب إنشاء السحب")
+        return {"error": str(e)}
+
+def get_withdraw_status(withdraw_id):
+    try:
+        r = requests.get(f"{BASE_URL}/withdraw/{withdraw_id}", headers=headers, timeout=15)
+        r.raise_for_status()
+        return r.json()
+    except RequestException as e:
+        logging.exception("خطأ أثناء استعلام حالة السحب")
+        return {"error": str(e)}
+
+def main():
+    logging.info("بدء عملية سحب")
+    resp = create_withdraw(AMOUNT, CURRENCY, DESTINATION, DESCRIPTION)
+    logging.info("Create response: %s", json.dumps(resp, ensure_ascii=False))
+
+    withdraw_id = resp.get("withdraw_id") or resp.get("id") or resp.get("data", {}).get("withdraw_id")
+    if not withdraw_id:
+        logging.error("لم يتم إرجاع withdraw_id في الاستجابة. تحقق من الرد.")
+        return
+
+    logging.info("Withdraw created: %s", withdraw_id)
+    start = time.time()
+    while True:
+        status_resp = get_withdraw_status(withdraw_id)
+        logging.info("Status response: %s", json.dumps(status_resp, ensure_ascii=False))
+        status = status_resp.get("status")
+
+        if status == "completed":
+            logging.info("✅ تم إتمام السحب")
+            break
+        elif status == "failed":
+            logging.error("❌ فشل السحب")
+            break
+
+        elapsed = time.time() - start
+        if elapsed >= TIMEOUT_SECS:
+            logging.error("⏳ انتهت مهلة الانتظار بعد %s ثانية", elapsed)
+            break
+
+        time.sleep(POLL_INTERVAL)
+
+if __name__ == "__main__":
+    main()
+export API_KEY="702567388"
+python3 withdraw.py
