@@ -1,14 +1,21 @@
 ---
-title: Get started
-pcx_content_type: get-started
+title: Create Payment
+pcx_content_type: api-reference
 sidebar:
-  order: 2
-  group:
-    hideIndex: true
+  order: 1
 ---
 
-import { DirectoryListing, Render } from "~/components";
+## Example: Create Payment
 
-<Render file="api-using-api" product="fundamentals" />
+استخدم المثال التالي لإنشاء عملية دفع عبر واجهة YemenCheckout API:
 
-<DirectoryListing />
+```bash
+curl -X POST https://yemencheckout.com/api/payment \
+  -H "Authorization: Bearer <YOUR_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 1000,
+    "currency": "usdt",
+    "description": "Test payment",
+    "callback_url": "https://example.com/payment/callback"
+  }'
